@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
 class TodoScreen extends StatefulWidget {
   const TodoScreen({super.key});
@@ -235,14 +236,24 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
   }
 
   void _showAddTaskModal() {
-    String taskTitle = '';
-    DateTime? selectedDate;
-    TimeOfDay? selectedTime;
+    _showTaskModal();
+  }
+
+  void _showEditTaskModal(TodoItem todo) {
+    _showTaskModal(todo: todo);
+  }
+
+  void _showTaskModal({TodoItem? todo}) {
+    String taskTitle = todo?.title ?? '';
+    DateTime? selectedDate = todo?.dueDate;
+    TimeOfDay? selectedTime = todo?.dueDate != null 
+        ? TimeOfDay.fromDateTime(todo!.dueDate!)
+        : null;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: Colors.black.withOpacity(0.5),
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
@@ -266,9 +277,9 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Add New Task',
-                          style: TextStyle(
+                        Text(
+                          todo != null ? 'Edit Task' : 'Add New Task',
+                          style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
@@ -281,6 +292,7 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                     ),
                     const SizedBox(height: 20),
                     TextField(
+                      controller: TextEditingController(text: taskTitle),
                       decoration: const InputDecoration(
                         labelText: 'Task Title',
                         border: OutlineInputBorder(),
@@ -336,15 +348,55 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                     const SizedBox(height: 12),
                     InkWell(
                       onTap: () async {
-                        final time = await showTimePicker(
+                        showCupertinoModalPopup(
                           context: context,
-                          initialTime: TimeOfDay.now(),
+                          builder: (BuildContext context) {
+                            return Container(
+                              height: 300,
+                              color: Colors.white,
+                              child: Column(
+                                children: [
+                                  Container(
+                                    height: 50,
+                                    color: const Color(0xFF1A237E),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        CupertinoButton(
+                                          child: const Text(
+                                            'Cancel',
+                                            style: TextStyle(color: Colors.white),
+                                          ),
+                                          onPressed: () => Navigator.pop(context),
+                                        ),
+                                        CupertinoButton(
+                                          child: const Text(
+                                            'Done',
+                                            style: TextStyle(color: Colors.white),
+                                          ),
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: CupertinoDatePicker(
+                                      mode: CupertinoDatePickerMode.time,
+                                      initialDateTime: DateTime.now(),
+                                      onDateTimeChanged: (DateTime newDateTime) {
+                                        setModalState(() {
+                                          selectedTime = TimeOfDay.fromDateTime(newDateTime);
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         );
-                        if (time != null) {
-                          setModalState(() {
-                            selectedTime = time;
-                          });
-                        }
                       },
                       child: Container(
                         padding: const EdgeInsets.all(16),
@@ -383,12 +435,24 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                             );
                             
                             setState(() {
-                              _todos.add(TodoItem(
-                                id: DateTime.now().millisecondsSinceEpoch.toString(),
-                                title: taskTitle,
-                                dueDate: dueDateTime,
-                                status: TodoStatus.pending,
-                              ));
+                              if (todo != null) {
+                                // Edit existing todo
+                                final todoIndex = _todos.indexWhere((t) => t.id == todo.id);
+                                if (todoIndex != -1) {
+                                  _todos[todoIndex] = _todos[todoIndex].copyWith(
+                                    title: taskTitle,
+                                    dueDate: dueDateTime,
+                                  );
+                                }
+                              } else {
+                                // Add new todo
+                                _todos.add(TodoItem(
+                                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                                  title: taskTitle,
+                                  dueDate: dueDateTime,
+                                  status: TodoStatus.pending,
+                                ));
+                              }
                             });
                             Navigator.pop(context);
                           }
@@ -397,9 +461,9 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                           backgroundColor: const Color(0xFF1A237E),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        child: const Text(
-                          'Add Task',
-                          style: TextStyle(
+                        child: Text(
+                          todo != null ? 'Update Task' : 'Add Task',
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -602,6 +666,16 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                   ),
               ],
             ),
+          ),
+          IconButton(
+            onPressed: () => _showEditTaskModal(todo),
+            icon: const Icon(
+              Icons.edit_outlined,
+              size: 20,
+              color: Colors.grey,
+            ),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
           ),
         ],
       ),

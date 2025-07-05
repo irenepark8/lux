@@ -202,7 +202,7 @@ class _FlipClock extends StatelessWidget {
       children: [
         _FlipDigit(digit: min[0], color: color, fontFamily: fontFamily),
         _FlipDigit(digit: min[1], color: color, fontFamily: fontFamily),
-        Text(':', style: TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.bold, color: color, fontSize: 36)),
+        Text(':', style: TextStyle(fontFamily: fontFamily, fontWeight: FontWeight.bold, color: color, fontSize: 64)),
         _FlipDigit(digit: sec[0], color: color, fontFamily: fontFamily),
         _FlipDigit(digit: sec[1], color: color, fontFamily: fontFamily),
       ],
@@ -235,7 +235,7 @@ class _FlipDigit extends StatelessWidget {
             fontFamily: fontFamily,
             fontWeight: FontWeight.bold,
             color: color,
-            fontSize: 36,
+            fontSize: 64,
             letterSpacing: 1.2,
           ),
         ),
