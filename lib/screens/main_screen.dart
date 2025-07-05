@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 import '../widgets/custom_bottom_nav.dart';
 import 'pomodoro_screen.dart';
+import 'todo_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -28,6 +29,8 @@ class _MainScreenState extends State<MainScreen> {
         return _buildHomeScreen();
       case 2:
         return const PomodoroScreen();
+      case 3:
+        return const TodoScreen();
       default:
         return _buildPlaceholderScreen();
     }
