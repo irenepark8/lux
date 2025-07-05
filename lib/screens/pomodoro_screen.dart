@@ -1,76 +1,16 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
+import 'package:provider/provider.dart';
+import '../pomodoro_timer_model.dart';
 
-class PomodoroScreen extends StatefulWidget {
+class PomodoroScreen extends StatelessWidget {
   const PomodoroScreen({super.key});
 
   @override
-  State<PomodoroScreen> createState() => _PomodoroScreenState();
-}
-
-class _PomodoroScreenState extends State<PomodoroScreen> {
-  bool _isWork = true;
-  int _workMinutes = 25;
-  int _breakMinutes = 5;
-  int _secondsLeft = 25 * 60;
-  Timer? _timer;
-  bool _running = false;
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  void _startTimer() {
-    if (_running) return;
-    setState(() => _running = true);
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_secondsLeft > 0) {
-        setState(() => _secondsLeft--);
-      } else {
-        _timer?.cancel();
-        setState(() {
-          _isWork = !_isWork;
-          _secondsLeft = (_isWork ? _workMinutes : _breakMinutes) * 60;
-          _running = false;
-        });
-      }
-    });
-  }
-
-  void _pauseTimer() {
-    _timer?.cancel();
-    setState(() => _running = false);
-  }
-
-  void _resetTimer() {
-    _timer?.cancel();
-    setState(() {
-      _secondsLeft = (_isWork ? _workMinutes : _breakMinutes) * 60;
-      _running = false;
-    });
-  }
-
-  void _adjustWork(int delta) {
-    setState(() {
-      _workMinutes = (_workMinutes + delta).clamp(1, 60);
-      if (_isWork) _secondsLeft = _workMinutes * 60;
-    });
-  }
-
-  void _adjustBreak(int delta) {
-    setState(() {
-      _breakMinutes = (_breakMinutes + delta).clamp(1, 30);
-      if (!_isWork) _secondsLeft = _breakMinutes * 60;
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final themeColor = _isWork ? const Color(0xFF888DFF) : const Color(0xFF1A237E); // periwinkle/navy
-    final textColor = _isWork ? Colors.white : Colors.white;
-    final bubblyFont = 'Rubik'; // Use Rubik as a bubbly font if available, else fallback
+    final timerModel = Provider.of<PomodoroTimerModel>(context);
+    final themeColor = timerModel.isWork ? const Color(0xFF888DFF) : const Color(0xFF1A237E);
+    final textColor = Colors.white;
+    final bubblyFont = 'Rubik';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -99,7 +39,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      _isWork ? 'Work' : 'Break',
+                      timerModel.isWork ? 'Work' : 'Break',
                       style: TextStyle(
                         fontFamily: bubblyFont,
                         fontWeight: FontWeight.w600,
@@ -111,7 +51,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
                 ],
               ),
               const SizedBox(height: 40),
-              
               // Timer Display
               Expanded(
                 child: Center(
@@ -119,25 +58,24 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       _FlipClock(
-                        seconds: _secondsLeft,
+                        seconds: timerModel.secondsLeft,
                         color: themeColor,
                         fontFamily: bubblyFont,
                       ),
                       const SizedBox(height: 40),
-                      
                       // Control Buttons
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           _buildControlButton(
-                            _running ? 'Pause' : 'Start',
-                            _running ? _pauseTimer : _startTimer,
+                            timerModel.running ? 'Pause' : 'Start',
+                            timerModel.running ? timerModel.pauseTimer : timerModel.startTimer,
                             themeColor,
                             textColor,
                           ),
                           _buildControlButton(
                             'Reset',
-                            _resetTimer,
+                            timerModel.resetTimer,
                             themeColor,
                             textColor,
                           ),
@@ -147,7 +85,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
                   ),
                 ),
               ),
-              
               // Settings Panel
               Container(
                 padding: const EdgeInsets.all(20),
@@ -173,9 +110,9 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
                         Expanded(
                           child: _buildAdjuster(
                             label: 'Work (min)',
-                            value: _workMinutes,
-                            onInc: () => _adjustWork(1),
-                            onDec: () => _adjustWork(-1),
+                            value: timerModel.workMinutes,
+                            onInc: () => timerModel.adjustWork(1),
+                            onDec: () => timerModel.adjustWork(-1),
                             color: themeColor,
                             textColor: Colors.white,
                           ),
@@ -184,9 +121,9 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
                         Expanded(
                           child: _buildAdjuster(
                             label: 'Break (min)',
-                            value: _breakMinutes,
-                            onInc: () => _adjustBreak(1),
-                            onDec: () => _adjustBreak(-1),
+                            value: timerModel.breakMinutes,
+                            onInc: () => timerModel.adjustBreak(1),
+                            onDec: () => timerModel.adjustBreak(-1),
                             color: themeColor,
                             textColor: Colors.white,
                           ),
@@ -202,8 +139,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
       ),
     );
   }
-
-
 
   Widget _buildAdjuster({
     required String label,
