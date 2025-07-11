@@ -58,6 +58,35 @@ class PomodoroTimerModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // --- ADDED METHODS FOR UI ENHANCEMENTS ---
+  void switchToBreak() {
+    _isWork = false;
+    _timer?.cancel();
+    _running = false;
+    _secondsLeft = _breakMinutes * 60;
+    notifyListeners();
+  }
+
+  void switchToWork() {
+    _isWork = true;
+    _timer?.cancel();
+    _running = false;
+    _secondsLeft = _workMinutes * 60;
+    notifyListeners();
+  }
+
+  void setWorkMinutes(int minutes) {
+    _workMinutes = minutes.clamp(1, 60);
+    if (_isWork) _secondsLeft = _workMinutes * 60;
+    notifyListeners();
+  }
+
+  void setBreakMinutes(int minutes) {
+    _breakMinutes = minutes.clamp(1, 30);
+    if (!_isWork) _secondsLeft = _breakMinutes * 60;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _timer?.cancel();

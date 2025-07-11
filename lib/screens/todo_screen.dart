@@ -484,20 +484,20 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).scaffoldBackgroundColor : Colors.white,
       appBar: AppBar(
         centerTitle: true,
         title: const Text(
           'Study Planner',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.bold, color: null),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
         elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor ?? (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black),
       ),
       body: Stack(
         children: [
@@ -505,12 +505,12 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
             children: [
               // Tab Bar
               Container(
-                color: Colors.white,
+                color: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).scaffoldBackgroundColor : Colors.white,
                 child: TabBar(
                   controller: _tabController,
                   indicatorColor: const Color(0xFF888DFF),
                   labelColor: const Color(0xFF888DFF),
-                  unselectedLabelColor: Colors.grey,
+                  unselectedLabelColor: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.grey,
                   labelStyle: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -556,7 +556,7 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
               ),
               child: FloatingActionButton(
                 onPressed: _showAddTaskModal,
-                backgroundColor: const Color(0xFF1A237E), // navy blue
+                backgroundColor: const Color(0xFF1A237E), // navy blue (brand color, keep as is)
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -579,12 +579,12 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Today',
-            style: TextStyle(
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
               fontSize: 20,
-              color: Colors.black87,
+              color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
             ),
           ),
           const SizedBox(height: 16),
@@ -604,15 +604,24 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
 
   Widget _buildTodoItem(TodoItem todo) {
     final itemKey = GlobalKey();
-    
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       key: itemKey,
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF2C2C2E) : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
+        border: Border.all(color: isDark ? Colors.grey[700]! : Colors.grey[200]!),
+        boxShadow: isDark
+            ? [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.18),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : [],
       ),
       child: Row(
         children: [
@@ -649,7 +658,9 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
-                    color: todo.status == TodoStatus.completed ? Colors.grey : Colors.black87,
+                    color: isDark
+                        ? Colors.white
+                        : (todo.status == TodoStatus.completed ? Colors.grey : Colors.black87),
                     decoration: todo.status == TodoStatus.completed 
                         ? TextDecoration.lineThrough 
                         : null,
@@ -661,7 +672,7 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                     _formatDueDate(todo.dueDate!),
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey[600],
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
                     ),
                   ),
               ],
@@ -669,10 +680,10 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
           ),
           IconButton(
             onPressed: () => _showEditTaskModal(todo),
-            icon: const Icon(
+            icon: Icon(
               Icons.edit_outlined,
               size: 20,
-              color: Colors.grey,
+              color: isDark ? Colors.white70 : Colors.grey,
             ),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -724,26 +735,27 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildStudyPlanTab() {
-    return const Center(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
+          const Icon(
             Icons.construction,
             size: 64,
             color: Colors.grey,
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text(
             'Study Plan Coming Soon!',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Colors.grey,
+              color: isDark ? Colors.white70 : Colors.grey,
             ),
           ),
-          SizedBox(height: 8),
-          Text(
+          const SizedBox(height: 8),
+          const Text(
             'This feature is under development',
             style: TextStyle(
               fontSize: 16,
@@ -829,4 +841,4 @@ class TodoItem {
       status: status ?? this.status,
     );
   }
-} 
+}

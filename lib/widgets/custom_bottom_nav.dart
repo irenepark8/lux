@@ -12,6 +12,11 @@ class CustomBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF2C2C2E) : Colors.white;
+    final selectedColor = isDark ? Colors.white : Colors.black;
+    final unselectedColor = isDark ? Colors.white.withOpacity(0.7) : Colors.grey;
+    final navBarTheme = BottomNavigationBarTheme.of(context);
     return BottomNavigationBar(
       type: BottomNavigationBarType.fixed,
       currentIndex: selectedIndex,
@@ -35,9 +40,14 @@ class CustomBottomNav extends StatelessWidget {
           label: 'dict',
         ),
       ],
-      selectedItemColor: Colors.black,
-      unselectedItemColor: Colors.grey,
+      selectedItemColor: selectedColor,
+      unselectedItemColor: unselectedColor,
+      backgroundColor: bgColor,
       showUnselectedLabels: true,
+      selectedLabelStyle: TextStyle(color: selectedColor, fontWeight: FontWeight.w600),
+      unselectedLabelStyle: TextStyle(color: unselectedColor, fontWeight: FontWeight.w500),
+      enableFeedback: true,
+      mouseCursor: SystemMouseCursors.click,
     );
   }
 }

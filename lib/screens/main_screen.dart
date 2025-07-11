@@ -4,6 +4,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import '../widgets/custom_bottom_nav.dart';
 import 'pomodoro_screen.dart';
 import 'todo_screen.dart';
+import 'settings_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -44,7 +45,7 @@ class _MainScreenState extends State<MainScreen> {
           children: [
             Container(
               width: double.infinity,
-              color: const Color(0xFFF8DCC6),
+              color: const Color(0xFFF7D8C5), // Always peach, even in dark mode
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24.0),
                 child: Image.asset(
@@ -54,11 +55,11 @@ class _MainScreenState extends State<MainScreen> {
                 ),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 24, 0, 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 24, 0, 8),
               child: Text(
                 'Daily Schedule',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, fontSize: 18, color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87),
               ),
             ),
             Expanded(
@@ -79,10 +80,10 @@ class _MainScreenState extends State<MainScreen> {
                           children: [
                             Column(
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.access_time,
                                   size: 24,
-                                  color: Colors.black87,
+                                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
                                 ),
                                 if (!isLast)
                                   Container(
@@ -92,7 +93,9 @@ class _MainScreenState extends State<MainScreen> {
                                       vertical: 2,
                                     ),
                                     child: CustomPaint(
-                                      painter: DottedLinePainter(),
+                                      painter: DottedLinePainter(
+                                        color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF444444) : Colors.grey[400]!,
+                                      ),
                                     ),
                                   ),
                               ],
@@ -102,9 +105,10 @@ class _MainScreenState extends State<MainScreen> {
                               padding: const EdgeInsets.only(top: 2.0),
                               child: Text(
                                 '${item['start']} - ${item['end']}',
-                                style: const TextStyle(
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w500,
+                                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
                                 ),
                               ),
                             ),
@@ -125,8 +129,8 @@ class _MainScreenState extends State<MainScreen> {
                 context,
               ).showSnackBar(const SnackBar(content: Text('채팅 기능 준비 중!')));
             },
-            backgroundColor: const Color(0xFFDBE8F2),
-            child: const Icon(Icons.chat),
+            backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF2C2C2E) : const Color(0xFFDBE8F2),
+            child: Icon(Icons.chat, color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black),
           ),
         ),
       ],
@@ -186,7 +190,14 @@ class _MainScreenState extends State<MainScreen> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
-          IconButton(icon: const Icon(Icons.settings), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
+            },
+          ),
         ],
         elevation: 0,
         backgroundColor: Colors.white,
@@ -207,17 +218,18 @@ class _MainScreenState extends State<MainScreen> {
 }
 
 class DottedLinePainter extends CustomPainter {
+  final Color color;
+  DottedLinePainter({required this.color});
   @override
   void paint(Canvas canvas, Size size) {
-    const dashWidth = 2.0;
-    const dashSpace = 4.0;
-    double startY = 0;
     final paint = Paint()
-      ..color = Colors.grey
-      ..strokeWidth = 2;
+      ..color = color
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+    double dashHeight = 4, dashSpace = 4, startY = 0;
     while (startY < size.height) {
-      canvas.drawLine(Offset(0, startY), Offset(0, startY + dashWidth), paint);
-      startY += dashWidth + dashSpace;
+      canvas.drawLine(Offset(0, startY), Offset(0, startY + dashHeight), paint);
+      startY += dashHeight + dashSpace;
     }
   }
 
