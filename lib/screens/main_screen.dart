@@ -31,7 +31,13 @@ class _MainScreenState extends State<MainScreen> {
       case 2:
         return const PomodoroScreen();
       case 3:
-        return const TodoScreen();
+        return TodoScreen(
+          onBackToMain: () {
+            setState(() {
+              _selectedIndex = 0;
+            });
+          },
+        );
       default:
         return _buildPlaceholderScreen();
     }
@@ -183,6 +189,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: _selectedIndex == 0 ? AppBar(
         centerTitle: true,
         title: const Text(
@@ -212,7 +219,6 @@ class _MainScreenState extends State<MainScreen> {
           });
         },
       ),
-      backgroundColor: Colors.white,
     );
   }
 }

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 
 class TodoScreen extends StatefulWidget {
-  const TodoScreen({super.key});
+  final VoidCallback? onBackToMain;
+  const TodoScreen({super.key, this.onBackToMain});
 
   @override
   State<TodoScreen> createState() => _TodoScreenState();
@@ -285,7 +286,7 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                           ),
                         ),
                         IconButton(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () => Navigator.of(context).pop(),
                           icon: const Icon(Icons.close),
                         ),
                       ],
@@ -367,7 +368,7 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                                             'Cancel',
                                             style: TextStyle(color: Colors.white),
                                           ),
-                                          onPressed: () => Navigator.pop(context),
+                                          onPressed: () => Navigator.of(context).pop(),
                                         ),
                                         CupertinoButton(
                                           child: const Text(
@@ -375,7 +376,7 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                                             style: TextStyle(color: Colors.white),
                                           ),
                                           onPressed: () {
-                                            Navigator.pop(context);
+                                            Navigator.of(context).pop();
                                           },
                                         ),
                                       ],
@@ -454,7 +455,7 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                                 ));
                               }
                             });
-                            Navigator.pop(context);
+                            Navigator.of(context).pop();
                           }
                         },
                         style: ElevatedButton.styleFrom(
@@ -484,16 +485,18 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).scaffoldBackgroundColor : Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         centerTitle: true,
+        leading: widget.onBackToMain != null
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: widget.onBackToMain,
+              )
+            : null,
         title: const Text(
           'Study Planner',
           style: TextStyle(fontWeight: FontWeight.bold, color: null),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
         ),
         elevation: 0,
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
