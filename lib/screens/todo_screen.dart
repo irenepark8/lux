@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/cupertino.dart';
+import '../db/todo_api_service.dart';
 
 class TodoScreen extends StatefulWidget {
   const TodoScreen({super.key});
@@ -24,6 +25,7 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
   List<TodoItem> _todos = [];
   bool _isLoading = false;
   String? _errorMessage;
+  late TodoApiService _todoApiService;
 
   @override
   void initState() {
@@ -53,6 +55,7 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
         curve: Curves.easeInOut,
       ),
     );
+    _todoApiService = TodoApiService();
     _fetchTodos();
   }
 
@@ -62,43 +65,28 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
       _errorMessage = null;
     });
     try {
-      final baseUrl = dotenv.env['SUPABASE_FUNCTION_URL'] ?? '';
-      final token = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
       final today = DateTime.now();
       final date =
           "${today.year.toString().padLeft(4, '0')}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
-      final url = Uri.parse('$baseUrl/get_todo?date=$date');
-      final response = await http.get(
-        url,
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      // GET 요청에 대한 로그는 남기지 않음
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        setState(() {
-          _todos = data
-              .map(
-                (e) => TodoItem(
-                  id: e['id'].toString(),
-                  title: e['title'] ?? '',
-                  dueDate: e['due_date'] != null
-                      ? DateTime.tryParse(e['due_date'])
-                      : null,
-                  status: TodoStatus.pending, // 서버에서 상태값 오면 매핑 필요
-                ),
-              )
-              .toList();
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _errorMessage = '할 일 목록을 불러오지 못했습니다.';
-          _isLoading = false;
-        });
-      }
+      final data = await _todoApiService.fetchTodos(date);
+      setState(() {
+        _todos = data
+            .map(
+              (e) => TodoItem(
+                id: e['id'].toString(),
+                title: e['title'] ?? '',
+                dueDate: e['due_date'] != null
+                    ? DateTime.tryParse(e['due_date'])
+                    : null,
+                status: TodoStatus.pending, // 서버에서 상태값 오면 매핑 필요
+              ),
+            )
+            .toList();
+        _isLoading = false;
+      });
     } catch (e) {
       setState(() {
-        _errorMessage = '네트워크 오류: $e';
+        _errorMessage = e.toString();
         _isLoading = false;
       });
     }
@@ -786,38 +774,12 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
       _errorMessage = null;
     });
     try {
-      final baseUrl = dotenv.env['SUPABASE_FUNCTION_URL'] ?? '';
-      final token = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
-      final url = Uri.parse('$baseUrl/add_todo'); // 반드시 add_todo로 POST
-      final response = await http.post(
-        url,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: json.encode({
-          'title': title,
-          'due_date': dueDateTime.toIso8601String(),
-        }),
-      );
-      print('POST url: $url');
-      print('POST status: ${response.statusCode}');
-      print('POST body: ${response.body}');
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        // 성공 시 목록 새로고침
-        await _fetchTodos();
-        Navigator.of(context).pop(); // 다이얼로그 닫기
-      } else {
-        print('POST error: ${response.body}');
-        setState(() {
-          _errorMessage = '할 일 추가에 실패했습니다.';
-          _isLoading = false;
-        });
-      }
+      await _todoApiService.addTodo(title, dueDateTime.toIso8601String());
+      await _fetchTodos();
+      Navigator.of(context).pop();
     } catch (e) {
-      print('POST exception: $e');
       setState(() {
-        _errorMessage = '네트워크 오류: $e';
+        _errorMessage = e.toString();
         _isLoading = false;
       });
     }
