@@ -36,6 +36,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   provider: ^6.1.5
   shared_preferences: ^2.5.3
+  flutter_dotenv: ^5.2.1
+  http: ^1.4.0
 
 dev_dependencies:
   flutter_test:
@@ -62,6 +64,7 @@ flutter:
   assets:
     - assets/mainScreenImg.jpg
     - dumy/daily_schedule.json
+    - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

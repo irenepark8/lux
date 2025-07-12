@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'pomodoro_timer_model.dart';
 import 'screens/main_screen.dart';
 
@@ -47,7 +48,8 @@ class ThemeProvider extends ChangeNotifier {
   }
 }
 
-void main() {
+void main() async {
+  await dotenv.load(fileName: ".env");
   runApp(
     MultiProvider(
       providers: [

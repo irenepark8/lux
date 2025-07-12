@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../db/todo_api_service.dart';
 
 class TodoScreen extends StatefulWidget {
   final VoidCallback? onBackToMain;
@@ -19,32 +23,10 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
   late Animation<double> _bubbleOpacityAnimation;
   
   // Sample todo data
-  List<TodoItem> _todos = [
-    TodoItem(
-      id: '1',
-      title: 'Complete Math Assignment',
-      dueDate: DateTime.now().add(const Duration(days: 2)),
-      status: TodoStatus.pending,
-    ),
-    TodoItem(
-      id: '2',
-      title: 'Read Chapter 5 of Physics',
-      dueDate: DateTime.now().add(const Duration(days: 1)),
-      status: TodoStatus.pending,
-    ),
-    TodoItem(
-      id: '3',
-      title: 'Write Essay Draft',
-      dueDate: DateTime.now().add(const Duration(days: 3)),
-      status: TodoStatus.pending,
-    ),
-    TodoItem(
-      id: '4',
-      title: 'Practice Piano Scales',
-      dueDate: DateTime.now().add(const Duration(hours: 6)),
-      status: TodoStatus.pending,
-    ),
-  ];
+  List<TodoItem> _todos = [];
+  bool _isLoading = false;
+  String? _errorMessage;
+  late TodoApiService _todoApiService;
 
   @override
   void initState() {
@@ -76,6 +58,9 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
       parent: _bubbleAnimationController,
       curve: Curves.easeInOut,
     ));
+    
+    _todoApiService = TodoApiService();
+    _fetchTodos();
   }
 
   @override
@@ -211,6 +196,83 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
         _todos[todoIndex] = _todos[todoIndex].copyWith(status: TodoStatus.pending);
       }
     });
+  }
+
+  Future<void> _fetchTodos() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      final today = DateTime.now();
+      final date =
+          "${today.year.toString().padLeft(4, '0')}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
+      final data = await _todoApiService.fetchTodos(date);
+      setState(() {
+        _todos = data
+            .map(
+              (e) => TodoItem(
+                id: e['id'].toString(),
+                title: e['title'] ?? '',
+                dueDate: e['due_date'] != null
+                    ? DateTime.tryParse(e['due_date'])
+                    : null,
+                status: TodoStatus.pending, // 서버에서 상태값 오면 매핑 필요
+              ),
+            )
+            .toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  // 할 일 추가 함수
+  Future<void> _addTodo(String title) async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      final baseUrl = dotenv.env['SUPABASE_FUNCTION_URL'] ?? '';
+      final token = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+      final today = DateTime.now();
+      final date =
+          "${today.year.toString().padLeft(4, '0')}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
+      final url = Uri.parse('$baseUrl/add_todo');
+      final response = await http.post(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({'title': title, 'due_date': date}),
+      );
+      print('POST url: $url');
+      print('POST status: ${response.statusCode}');
+      print('POST body: ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // 성공 시 목록 새로고침
+        await _fetchTodos();
+        Navigator.of(context).pop(); // 다이얼로그 닫기
+      } else {
+        print('POST error: ${response.body}');
+        setState(() {
+          _errorMessage = '할 일 추가에 실패했습니다.';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('POST exception: $e');
+      setState(() {
+        _errorMessage = '네트워크 오류: $e';
+        _isLoading = false;
+      });
+    }
   }
 
   String _formatDueDate(DateTime dueDate) {
@@ -349,7 +411,8 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                     const SizedBox(height: 12),
                     InkWell(
                       onTap: () async {
-                        showCupertinoModalPopup(
+                        TimeOfDay? tempSelectedTime = selectedTime;
+                        final result = await showCupertinoModalPopup<TimeOfDay?>(
                           context: context,
                           builder: (BuildContext context) {
                             return Container(
@@ -368,7 +431,9 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                                             'Cancel',
                                             style: TextStyle(color: Colors.white),
                                           ),
-                                          onPressed: () => Navigator.of(context).pop(),
+                                          onPressed: () {
+                                            Navigator.of(context).pop(null);
+                                          },
                                         ),
                                         CupertinoButton(
                                           child: const Text(
@@ -376,7 +441,7 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                                             style: TextStyle(color: Colors.white),
                                           ),
                                           onPressed: () {
-                                            Navigator.of(context).pop();
+                                            Navigator.of(context).pop(tempSelectedTime);
                                           },
                                         ),
                                       ],
@@ -385,11 +450,11 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                                   Expanded(
                                     child: CupertinoDatePicker(
                                       mode: CupertinoDatePickerMode.time,
-                                      initialDateTime: DateTime.now(),
+                                      initialDateTime: selectedTime != null 
+                                          ? DateTime(2024, 1, 1, selectedTime!.hour, selectedTime!.minute)
+                                          : DateTime.now(),
                                       onDateTimeChanged: (DateTime newDateTime) {
-                                        setModalState(() {
-                                          selectedTime = TimeOfDay.fromDateTime(newDateTime);
-                                        });
+                                        tempSelectedTime = TimeOfDay.fromDateTime(newDateTime);
                                       },
                                     ),
                                   ),
@@ -398,6 +463,12 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                             );
                           },
                         );
+                        
+                        if (result != null) {
+                          setModalState(() {
+                            selectedTime = result;
+                          });
+                        }
                       },
                       child: Container(
                         padding: const EdgeInsets.all(16),
@@ -425,19 +496,19 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
                           if (taskTitle.isNotEmpty && selectedDate != null && selectedTime != null) {
-                            final dueDateTime = DateTime(
-                              selectedDate!.year,
-                              selectedDate!.month,
-                              selectedDate!.day,
-                              selectedTime!.hour,
-                              selectedTime!.minute,
-                            );
-                            
-                            setState(() {
-                              if (todo != null) {
-                                // Edit existing todo
+                            if (todo != null) {
+                              // Edit existing todo (로컬에서만 수정)
+                              final dueDateTime = DateTime(
+                                selectedDate!.year,
+                                selectedDate!.month,
+                                selectedDate!.day,
+                                selectedTime!.hour,
+                                selectedTime!.minute,
+                              );
+                              
+                              setState(() {
                                 final todoIndex = _todos.indexWhere((t) => t.id == todo.id);
                                 if (todoIndex != -1) {
                                   _todos[todoIndex] = _todos[todoIndex].copyWith(
@@ -445,17 +516,12 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                                     dueDate: dueDateTime,
                                   );
                                 }
-                              } else {
-                                // Add new todo
-                                _todos.add(TodoItem(
-                                  id: DateTime.now().millisecondsSinceEpoch.toString(),
-                                  title: taskTitle,
-                                  dueDate: dueDateTime,
-                                  status: TodoStatus.pending,
-                                ));
-                              }
-                            });
-                            Navigator.of(context).pop();
+                              });
+                              Navigator.of(context).pop();
+                            } else {
+                              // Add new todo using HTTP request
+                              await _addTodo(taskTitle);
+                            }
                           }
                         },
                         style: ElevatedButton.styleFrom(
@@ -591,14 +657,42 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
             ),
           ),
           const SizedBox(height: 16),
-          Expanded(
-            child: ListView.builder(
-              itemCount: _todos.length,
-              itemBuilder: (context, index) {
-                final todo = _todos[index];
-                return _buildTodoItem(todo);
-              },
+          if (_errorMessage != null)
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.red.shade100,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade300),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error, color: Colors.red.shade700),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _errorMessage!,
+                      style: TextStyle(color: Colors.red.shade700),
+                    ),
+                  ),
+                ],
+              ),
             ),
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1A237E)),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: _todos.length,
+                    itemBuilder: (context, index) {
+                      final todo = _todos[index];
+                      return _buildTodoItem(todo);
+                    },
+                  ),
           ),
         ],
       ),
