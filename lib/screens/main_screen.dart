@@ -5,6 +5,8 @@ import '../widgets/custom_bottom_nav.dart';
 import 'pomodoro_screen.dart';
 import 'todo_screen.dart';
 import 'settings_screen.dart';
+import 'calendar_page.dart';
+import 'package:flutter/cupertino.dart'; // Added for CupertinoActionSheet and CupertinoAlertDialog
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -28,6 +30,8 @@ class _MainScreenState extends State<MainScreen> {
     switch (_selectedIndex) {
       case 0:
         return _buildHomeScreen();
+      case 1:
+        return const CalendarPage();
       case 2:
         return const PomodoroScreen();
       case 3:
@@ -142,6 +146,147 @@ class _MainScreenState extends State<MainScreen> {
       ],
     );
   }
+
+
+
+
+  
+
+  
+
+  
+
+
+
+
+
+  
+
+
+  Widget _buildDailySchedule() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section Header (Apple Calendar style)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12.0),
+            child: Text(
+              'Daily Schedule',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).brightness == Brightness.dark 
+                    ? Colors.white 
+                    : Colors.black,
+                letterSpacing: -0.3,
+              ),
+            ),
+          ),
+          // Schedule Items
+          ..._buildScheduleItems(),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildScheduleItems() {
+    List<Map<String, String>> scheduleItems = [
+      {'time': '8:00 AM – 9:00 AM', 'activity': 'Morning Study Session'},
+      {'time': '10:30 AM – 11:30 AM', 'activity': 'Break & Refresh'},
+      {'time': '2:00 PM – 3:30 PM', 'activity': 'Afternoon Focus Time'},
+      {'time': '4:00 PM – 5:00 PM', 'activity': 'Review & Planning'},
+      {'time': '7:00 PM – 8:00 PM', 'activity': 'Evening Review'},
+    ];
+
+    return scheduleItems.asMap().entries.map((entry) {
+      int index = entry.key;
+      Map<String, String> item = entry.value;
+      bool isLast = index == scheduleItems.length - 1;
+
+      return Container(
+        margin: const EdgeInsets.only(bottom: 16.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Time Column (Apple Calendar style)
+            Container(
+              width: 60,
+              child: Column(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A237E),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  if (!isLast)
+                    Container(
+                      width: 2,
+                      height: 40,
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).brightness == Brightness.dark 
+                            ? Colors.grey[700] 
+                            : Colors.grey[300],
+                        borderRadius: BorderRadius.circular(1),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            // Content Column (Apple Calendar style)
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item['time']!,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: Theme.of(context).brightness == Brightness.dark 
+                          ? Colors.white 
+                          : Colors.black87,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    item['activity']!,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      color: Theme.of(context).brightness == Brightness.dark 
+                          ? Colors.grey[400] 
+                          : Colors.grey[600],
+                      letterSpacing: -0.1,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }).toList();
+  }
+
+
+  
+
+
+
+
+
+
+
+
+
 
   Widget _buildPlaceholderScreen() {
     return const Center(
