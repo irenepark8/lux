@@ -20,7 +20,9 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     final bubblyFont = 'Rubik';
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Theme.of(context).brightness == Brightness.light 
+          ? Colors.white 
+          : Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
           _FullscreenPulsingBackground(

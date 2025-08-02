@@ -189,7 +189,9 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Theme.of(context).brightness == Brightness.light 
+          ? Colors.white 
+          : Theme.of(context).scaffoldBackgroundColor,
       appBar: _selectedIndex == 0 ? AppBar(
         centerTitle: true,
         title: const Text(

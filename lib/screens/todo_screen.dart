@@ -373,15 +373,61 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                       ),
                       child: InkWell(
                         onTap: () async {
-                          final date = await showDatePicker(
+                          DateTime? tempSelectedDate = selectedDate ?? DateTime.now();
+                          
+                          final result = await showCupertinoModalPopup<DateTime?>(
                             context: context,
-                            initialDate: DateTime.now(),
-                            firstDate: DateTime.now(),
-                            lastDate: DateTime.now().add(const Duration(days: 365)),
+                            builder: (BuildContext context) {
+                              return Container(
+                                height: 300,
+                                color: Colors.white,
+                                child: Column(
+                                  children: [
+                                    Container(
+                                      height: 50,
+                                      color: const Color(0xFF1A237E),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          CupertinoButton(
+                                            child: const Text(
+                                              'Cancel',
+                                              style: TextStyle(color: Colors.white),
+                                            ),
+                                            onPressed: () {
+                                              Navigator.of(context).pop(null);
+                                            },
+                                          ),
+                                          CupertinoButton(
+                                            child: const Text(
+                                              'Save',
+                                              style: TextStyle(color: Colors.white),
+                                            ),
+                                            onPressed: () {
+                                              Navigator.of(context).pop(tempSelectedDate);
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: CupertinoDatePicker(
+                                        mode: CupertinoDatePickerMode.date,
+                                        initialDateTime: tempSelectedDate,
+                                        onDateTimeChanged: (DateTime newDate) {
+                                          tempSelectedDate = newDate;
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           );
-                          if (date != null) {
+                          
+                          if (result != null) {
                             setModalState(() {
-                              selectedDate = date;
+                              selectedDate = DateTime(result.year, result.month, result.day);
                             });
                           }
                         },
@@ -409,89 +455,99 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    InkWell(
-                      onTap: () async {
-                        TimeOfDay? tempSelectedTime = selectedTime;
-                        final result = await showCupertinoModalPopup<TimeOfDay?>(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return Container(
-                              height: 300,
-                              color: Colors.white,
-                              child: Column(
-                                children: [
-                                  Container(
-                                    height: 50,
-                                    color: const Color(0xFF1A237E),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        CupertinoButton(
-                                          child: const Text(
-                                            'Cancel',
-                                            style: TextStyle(color: Colors.white),
+                    // Due Time Field
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: InkWell(
+                        onTap: () async {
+                          DateTime? tempSelectedTime = selectedTime != null
+                              ? DateTime(2024, 1, 1, selectedTime!.hour, selectedTime!.minute)
+                              : DateTime.now();
+                          
+                          final result = await showCupertinoModalPopup<DateTime?>(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return Container(
+                                height: 300,
+                                color: Colors.white,
+                                child: Column(
+                                  children: [
+                                    Container(
+                                      height: 50,
+                                      color: const Color(0xFF1A237E),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          CupertinoButton(
+                                            child: const Text(
+                                              'Cancel',
+                                              style: TextStyle(color: Colors.white),
+                                            ),
+                                            onPressed: () {
+                                              Navigator.of(context).pop(null);
+                                            },
                                           ),
-                                          onPressed: () {
-                                            Navigator.of(context).pop(null);
-                                          },
-                                        ),
-                                        CupertinoButton(
-                                          child: const Text(
-                                            'Done',
-                                            style: TextStyle(color: Colors.white),
+                                          CupertinoButton(
+                                            child: const Text(
+                                              'Save',
+                                              style: TextStyle(color: Colors.white),
+                                            ),
+                                            onPressed: () {
+                                              Navigator.of(context).pop(tempSelectedTime);
+                                            },
                                           ),
-                                          onPressed: () {
-                                            Navigator.of(context).pop(tempSelectedTime);
-                                          },
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                  Expanded(
-                                    child: CupertinoDatePicker(
-                                      mode: CupertinoDatePickerMode.time,
-                                      initialDateTime: selectedTime != null 
-                                          ? DateTime(2024, 1, 1, selectedTime!.hour, selectedTime!.minute)
-                                          : DateTime.now(),
-                                      onDateTimeChanged: (DateTime newDateTime) {
-                                        tempSelectedTime = TimeOfDay.fromDateTime(newDateTime);
-                                      },
+                                    Expanded(
+                                      child: CupertinoDatePicker(
+                                        mode: CupertinoDatePickerMode.time,
+                                        use24hFormat: false,
+                                        initialDateTime: tempSelectedTime,
+                                        onDateTimeChanged: (DateTime newTime) {
+                                          tempSelectedTime = newTime;
+                                        },
+                                      ),
                                     ),
+                                  ],
+                                ),
+                              );
+                            },
+                          );
+                          
+                          if (result != null) {
+                            setModalState(() {
+                              selectedTime = TimeOfDay.fromDateTime(result);
+                            });
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.access_time, color: Color(0xFF1A237E)),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  selectedTime != null
+                                      ? selectedTime!.format(context)
+                                      : 'Due Time',
+                                  style: TextStyle(
+                                    color: selectedTime != null ? Colors.black : Colors.grey,
+                                    fontSize: 16,
                                   ),
-                                ],
+                                ),
                               ),
-                            );
-                          },
-                        );
-                        
-                        if (result != null) {
-                          setModalState(() {
-                            selectedTime = result;
-                          });
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.access_time, color: Color(0xFF1A237E)),
-                            const SizedBox(width: 12),
-                            Text(
-                              selectedTime != null
-                                  ? selectedTime!.format(context)
-                                  : 'Select Time',
-                              style: TextStyle(
-                                color: selectedTime != null ? Colors.black : Colors.grey,
-                              ),
-                            ),
-                          ],
+                              const Icon(Icons.access_time, color: Color(0xFF1A237E), size: 20),
+                            ],
+                          ),
                         ),
                       ),
                     ),
+
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
@@ -551,7 +607,9 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Theme.of(context).brightness == Brightness.light 
+          ? Colors.white 
+          : Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         centerTitle: true,
         leading: widget.onBackToMain != null
