@@ -32,4 +32,43 @@ class AppHttpClient {
       body: body,
     );
   }
-} 
+
+  // 공통 헤더와 함께 PATCH 요청
+  Future<http.Response> patch(
+    Uri url, {
+    Map<String, String>? headers,
+    Object? body,
+  }) {
+    return client.patch(
+      url,
+      headers: {...defaultHeaders, if (headers != null) ...headers},
+      body: body,
+    );
+  }
+
+  // 공통 헤더와 함께 PUT 요청
+  Future<http.Response> put(
+    Uri url, {
+    Map<String, String>? headers,
+    Object? body,
+  }) {
+    return client.put(
+      url,
+      headers: {...defaultHeaders, if (headers != null) ...headers},
+      body: body,
+    );
+  }
+
+  // 공통 헤더와 함께 DELETE 요청
+  Future<http.Response> delete(
+    Uri url, {
+    Map<String, String>? headers,
+    Object? body,
+  }) {
+    return client.delete(
+      url,
+      headers: {...defaultHeaders, if (headers != null) ...headers},
+      body: body,
+    );
+  }
+}

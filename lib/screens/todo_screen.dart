@@ -21,7 +21,7 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
   late AnimationController _bubbleAnimationController;
   late Animation<double> _bubbleScaleAnimation;
   late Animation<double> _bubbleOpacityAnimation;
-  
+
   // Sample todo data
   List<TodoItem> _todos = [];
   bool _isLoading = false;
@@ -37,28 +37,26 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
         _selectedTabIndex = _tabController.index;
       });
     });
-    
+
     _bubbleAnimationController = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
-    
-    _bubbleScaleAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _bubbleAnimationController,
-      curve: Curves.elasticOut,
-    ));
-    
-    _bubbleOpacityAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _bubbleAnimationController,
-      curve: Curves.easeInOut,
-    ));
-    
+
+    _bubbleScaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _bubbleAnimationController,
+        curve: Curves.elasticOut,
+      ),
+    );
+
+    _bubbleOpacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _bubbleAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
     _todoApiService = TodoApiService();
     _fetchTodos();
   }
@@ -77,17 +75,22 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
     _currentItemKey = null;
   }
 
-  void _showStatusBubble(BuildContext context, TodoItem todo, GlobalKey itemKey) {
+  void _showStatusBubble(
+    BuildContext context,
+    TodoItem todo,
+    GlobalKey itemKey,
+  ) {
     _removeOverlay(); // Remove any existing overlay
-    
+
     _currentItemKey = itemKey;
-    final RenderBox? renderBox = itemKey.currentContext?.findRenderObject() as RenderBox?;
-    
+    final RenderBox? renderBox =
+        itemKey.currentContext?.findRenderObject() as RenderBox?;
+
     if (renderBox == null) return;
-    
+
     final position = renderBox.localToGlobal(Offset.zero);
     final size = renderBox.size;
-    
+
     _overlayEntry = OverlayEntry(
       builder: (context) => Stack(
         children: [
@@ -114,26 +117,38 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                       child: CustomPaint(
                         painter: BubblePainter(),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               _buildStatusButton(
                                 context,
                                 'O',
-                                () => _updateTodoStatus(todo.id, TodoStatus.completed),
+                                () => _updateTodoStatus(
+                                  todo.id,
+                                  TodoStatus.completed,
+                                ),
                               ),
                               const SizedBox(width: 12),
                               _buildStatusButton(
                                 context,
                                 'X',
-                                () => _updateTodoStatus(todo.id, TodoStatus.failed),
+                                () => _updateTodoStatus(
+                                  todo.id,
+                                  TodoStatus.failed,
+                                ),
                               ),
                               const SizedBox(width: 12),
                               _buildStatusButton(
                                 context,
                                 '~',
-                                () => _updateTodoStatus(todo.id, TodoStatus.inProgress),
+                                () => _updateTodoStatus(
+                                  todo.id,
+                                  TodoStatus.inProgress,
+                                ),
                               ),
                             ],
                           ),
@@ -148,12 +163,16 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
         ],
       ),
     );
-    
+
     Overlay.of(context).insert(_overlayEntry!);
     _bubbleAnimationController.forward();
   }
 
-  Widget _buildStatusButton(BuildContext context, String symbol, VoidCallback onTap) {
+  Widget _buildStatusButton(
+    BuildContext context,
+    String symbol,
+    VoidCallback onTap,
+  ) {
     return GestureDetector(
       onTap: () {
         onTap();
@@ -180,20 +199,46 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
     );
   }
 
-  void _updateTodoStatus(String todoId, TodoStatus status) {
+  void _updateTodoStatus(String todoId, TodoStatus status) async {
+    final prevTodos = List<TodoItem>.from(_todos);
     setState(() {
       final todoIndex = _todos.indexWhere((todo) => todo.id == todoId);
       if (todoIndex != -1) {
         _todos[todoIndex] = _todos[todoIndex].copyWith(status: status);
       }
     });
+    try {
+      String statusStr;
+      switch (status) {
+        case TodoStatus.completed:
+          statusStr = 'O';
+          break;
+        case TodoStatus.failed:
+          statusStr = 'X';
+          break;
+        case TodoStatus.inProgress:
+          statusStr = '~';
+          break;
+        default:
+          statusStr = '';
+      }
+      await _todoApiService.updateTodoStatus(todoId, statusStr);
+      await _fetchTodos();
+    } catch (e) {
+      setState(() {
+        _todos = prevTodos;
+        _errorMessage = '상태 업데이트 실패: $e';
+      });
+    }
   }
 
   void _resetTodoStatus(String todoId) {
     setState(() {
       final todoIndex = _todos.indexWhere((todo) => todo.id == todoId);
       if (todoIndex != -1) {
-        _todos[todoIndex] = _todos[todoIndex].copyWith(status: TodoStatus.pending);
+        _todos[todoIndex] = _todos[todoIndex].copyWith(
+          status: TodoStatus.pending,
+        );
       }
     });
   }
@@ -217,7 +262,7 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                 dueDate: e['due_date'] != null
                     ? DateTime.tryParse(e['due_date'])
                     : null,
-                status: TodoStatus.pending, // 서버에서 상태값 오면 매핑 필요
+                status: _mapStatus(e['status']),
               ),
             )
             .toList();
@@ -278,7 +323,7 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
   String _formatDueDate(DateTime dueDate) {
     final now = DateTime.now();
     final difference = dueDate.difference(now);
-    
+
     if (difference.inDays > 0) {
       return 'Due in ${difference.inDays} day${difference.inDays == 1 ? '' : 's'}';
     } else if (difference.inHours > 0) {
@@ -292,8 +337,18 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
 
   String _formatDateForDisplay(DateTime date) {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
@@ -309,9 +364,16 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
   void _showTaskModal({TodoItem? todo}) {
     String taskTitle = todo?.title ?? '';
     DateTime? selectedDate = todo?.dueDate;
-    TimeOfDay? selectedTime = todo?.dueDate != null 
+    TimeOfDay? selectedTime = todo?.dueDate != null
         ? TimeOfDay.fromDateTime(todo!.dueDate!)
         : null;
+
+    // Add New Task일 때 디폴트로 현재 날짜/시간 입력
+    if (todo == null) {
+      final now = DateTime.now();
+      selectedDate ??= DateTime(now.year, now.month, now.day);
+      selectedTime ??= TimeOfDay(hour: now.hour, minute: now.minute);
+    }
 
     showModalBottomSheet(
       context: context,
@@ -337,14 +399,50 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (_isLoading)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Color(0xFF1A237E),
+                            ),
+                          ),
+                        ),
+                      ),
+                    if (_errorMessage != null)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red.shade300),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.error, color: Colors.red.shade700),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _errorMessage!,
+                                style: TextStyle(color: Colors.red.shade700),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          todo != null ? 'Edit Task' : 'Add New Task',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                        Expanded(
+                          child: Text(
+                            todo != null ? 'Edit Task' : 'Add New Task',
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         IconButton(
@@ -373,15 +471,61 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                       ),
                       child: InkWell(
                         onTap: () async {
-                          final date = await showDatePicker(
+                          DateTime? tempSelectedDate = selectedDate ?? DateTime.now();
+                          
+                          final result = await showCupertinoModalPopup<DateTime?>(
                             context: context,
-                            initialDate: DateTime.now(),
-                            firstDate: DateTime.now(),
-                            lastDate: DateTime.now().add(const Duration(days: 365)),
+                            builder: (BuildContext context) {
+                              return Container(
+                                height: 300,
+                                color: Colors.white,
+                                child: Column(
+                                  children: [
+                                    Container(
+                                      height: 50,
+                                      color: const Color(0xFF1A237E),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          CupertinoButton(
+                                            child: const Text(
+                                              'Cancel',
+                                              style: TextStyle(color: Colors.white),
+                                            ),
+                                            onPressed: () {
+                                              Navigator.of(context).pop(null);
+                                            },
+                                          ),
+                                          CupertinoButton(
+                                            child: const Text(
+                                              'Save',
+                                              style: TextStyle(color: Colors.white),
+                                            ),
+                                            onPressed: () {
+                                              Navigator.of(context).pop(tempSelectedDate);
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: CupertinoDatePicker(
+                                        mode: CupertinoDatePickerMode.date,
+                                        initialDateTime: tempSelectedDate,
+                                        onDateTimeChanged: (DateTime newDate) {
+                                          tempSelectedDate = newDate;
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           );
-                          if (date != null) {
+                          
+                          if (result != null) {
                             setModalState(() {
-                              selectedDate = date;
+                              selectedDate = DateTime(result.year, result.month, result.day);
                             });
                           }
                         },
@@ -389,7 +533,10 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                           padding: const EdgeInsets.all(16),
                           child: Row(
                             children: [
-                              const Icon(Icons.calendar_today, color: Color(0xFF1A237E)),
+                              const Icon(
+                                Icons.calendar_today,
+                                color: Color(0xFF1A237E),
+                              ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
@@ -397,133 +544,181 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                                       ? _formatDateForDisplay(selectedDate!)
                                       : 'Due Date',
                                   style: TextStyle(
-                                    color: selectedDate != null ? Colors.black : Colors.grey,
+                                    color: selectedDate != null
+                                        ? Colors.black
+                                        : Colors.grey,
                                     fontSize: 16,
                                   ),
                                 ),
                               ),
-                              const Icon(Icons.calendar_today, color: Color(0xFF1A237E), size: 20),
+                              const Icon(
+                                Icons.calendar_today,
+                                color: Color(0xFF1A237E),
+                                size: 20,
+                              ),
                             ],
                           ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 12),
-                    InkWell(
-                      onTap: () async {
-                        TimeOfDay? tempSelectedTime = selectedTime;
-                        final result = await showCupertinoModalPopup<TimeOfDay?>(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return Container(
-                              height: 300,
-                              color: Colors.white,
-                              child: Column(
-                                children: [
-                                  Container(
-                                    height: 50,
-                                    color: const Color(0xFF1A237E),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        CupertinoButton(
-                                          child: const Text(
-                                            'Cancel',
-                                            style: TextStyle(color: Colors.white),
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: InkWell(
+                        onTap: () async {
+                          DateTime? tempSelectedTime = selectedTime != null
+                              ? DateTime(2024, 1, 1, selectedTime!.hour, selectedTime!.minute)
+                              : DateTime.now();
+                          
+                          final result = await showCupertinoModalPopup<DateTime?>(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return Container(
+                                height: 300,
+                                color: Colors.white,
+                                child: Column(
+                                  children: [
+                                    Container(
+                                      height: 50,
+                                      color: const Color(0xFF1A237E),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          CupertinoButton(
+                                            child: const Text(
+                                              'Cancel',
+                                              style: TextStyle(color: Colors.white),
+                                            ),
+                                            onPressed: () {
+                                              Navigator.of(context).pop(null);
+                                            },
                                           ),
-                                          onPressed: () {
-                                            Navigator.of(context).pop(null);
-                                          },
-                                        ),
-                                        CupertinoButton(
-                                          child: const Text(
-                                            'Done',
-                                            style: TextStyle(color: Colors.white),
+                                          CupertinoButton(
+                                            child: const Text(
+                                              'Save',
+                                              style: TextStyle(color: Colors.white),
+                                            ),
+                                            onPressed: () {
+                                              Navigator.of(context).pop(tempSelectedTime);
+                                            },
                                           ),
-                                          onPressed: () {
-                                            Navigator.of(context).pop(tempSelectedTime);
-                                          },
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                  Expanded(
-                                    child: CupertinoDatePicker(
-                                      mode: CupertinoDatePickerMode.time,
-                                      initialDateTime: selectedTime != null 
-                                          ? DateTime(2024, 1, 1, selectedTime!.hour, selectedTime!.minute)
-                                          : DateTime.now(),
-                                      onDateTimeChanged: (DateTime newDateTime) {
-                                        tempSelectedTime = TimeOfDay.fromDateTime(newDateTime);
-                                      },
+                                    Expanded(
+                                      child: CupertinoDatePicker(
+                                        mode: CupertinoDatePickerMode.time,
+                                        use24hFormat: false,
+                                        initialDateTime: tempSelectedTime,
+                                        onDateTimeChanged: (DateTime newTime) {
+                                          tempSelectedTime = newTime;
+                                        },
+                                      ),
                                     ),
+                                  ],
+                                ),
+                              );
+                            },
+                          );
+                          
+                          if (result != null) {
+                            setModalState(() {
+                              selectedTime = TimeOfDay.fromDateTime(result);
+                            });
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.access_time, color: Color(0xFF1A237E)),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  selectedTime != null
+                                      ? selectedTime!.format(context)
+                                      : 'Due Time',
+                                  style: TextStyle(
+                                    color: selectedTime != null ? Colors.black : Colors.grey,
+                                    fontSize: 16,
                                   ),
-                                ],
+                                ),
                               ),
-                            );
-                          },
-                        );
-                        
-                        if (result != null) {
-                          setModalState(() {
-                            selectedTime = result;
-                          });
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.access_time, color: Color(0xFF1A237E)),
-                            const SizedBox(width: 12),
-                            Text(
-                              selectedTime != null
-                                  ? selectedTime!.format(context)
-                                  : 'Select Time',
-                              style: TextStyle(
-                                color: selectedTime != null ? Colors.black : Colors.grey,
-                              ),
-                            ),
-                          ],
+                              const Icon(Icons.access_time, color: Color(0xFF1A237E), size: 20),
+                            ],
+                          ),
                         ),
                       ),
                     ),
+
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () async {
-                          if (taskTitle.isNotEmpty && selectedDate != null && selectedTime != null) {
-                            if (todo != null) {
-                              // Edit existing todo (로컬에서만 수정)
-                              final dueDateTime = DateTime(
-                                selectedDate!.year,
-                                selectedDate!.month,
-                                selectedDate!.day,
-                                selectedTime!.hour,
-                                selectedTime!.minute,
-                              );
-                              
-                              setState(() {
-                                final todoIndex = _todos.indexWhere((t) => t.id == todo.id);
-                                if (todoIndex != -1) {
-                                  _todos[todoIndex] = _todos[todoIndex].copyWith(
-                                    title: taskTitle,
-                                    dueDate: dueDateTime,
-                                  );
+                        onPressed: _isLoading
+                            ? null
+                            : () async {
+                                if (taskTitle.isNotEmpty &&
+                                    selectedDate != null &&
+                                    selectedTime != null) {
+                                  if (todo != null) {
+                                    // Edit existing todo (FE에서 먼저 반영, 서버 PATCH는 비동기)
+                                    final dueDateTime = DateTime(
+                                      selectedDate!.year,
+                                      selectedDate!.month,
+                                      selectedDate!.day,
+                                      selectedTime!.hour,
+                                      selectedTime!.minute,
+                                    );
+                                    final dueDateStr =
+                                        "${dueDateTime.year.toString().padLeft(4, '0')}-${dueDateTime.month.toString().padLeft(2, '0')}-${dueDateTime.day.toString().padLeft(2, '0')}";
+                                    final todoIndex = _todos.indexWhere(
+                                      (t) => t.id == todo.id,
+                                    );
+                                    if (todoIndex != -1) {
+                                      final prevTodo = _todos[todoIndex];
+                                      setState(() {
+                                        _todos[todoIndex] = _todos[todoIndex]
+                                            .copyWith(
+                                              title: taskTitle,
+                                              dueDate: dueDateTime,
+                                            );
+                                      });
+                                      setModalState(() {
+                                        _isLoading = true;
+                                        _errorMessage = null;
+                                      });
+                                      try {
+                                        await _todoApiService.editTodo(
+                                          todo.id,
+                                          taskTitle,
+                                          dueDateStr,
+                                        );
+                                        setModalState(() {
+                                          _isLoading = false;
+                                        });
+                                        if (context.mounted)
+                                          Navigator.of(context).pop();
+                                        await _fetchTodos();
+                                      } catch (e) {
+                                        setState(() {
+                                          _todos[todoIndex] = prevTodo;
+                                        });
+                                        setModalState(() {
+                                          _errorMessage = e.toString();
+                                          _isLoading = false;
+                                        });
+                                      }
+                                    }
+                                  } else {
+                                    // Add new todo using HTTP request
+                                    await _addTodo(taskTitle);
+                                  }
                                 }
-                              });
-                              Navigator.of(context).pop();
-                            } else {
-                              // Add new todo using HTTP request
-                              await _addTodo(taskTitle);
-                            }
-                          }
-                        },
+                              },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1A237E),
                           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -551,7 +746,9 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Theme.of(context).brightness == Brightness.light 
+          ? Colors.white 
+          : Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         centerTitle: true,
         leading: widget.onBackToMain != null
@@ -565,8 +762,14 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
           style: TextStyle(fontWeight: FontWeight.bold, color: null),
         ),
         elevation: 0,
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
-        foregroundColor: Theme.of(context).appBarTheme.foregroundColor ?? (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black),
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            Theme.of(context).scaffoldBackgroundColor,
+        foregroundColor:
+            Theme.of(context).appBarTheme.foregroundColor ??
+            (Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Colors.black),
       ),
       body: Stack(
         children: [
@@ -574,12 +777,17 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
             children: [
               // Tab Bar
               Container(
-                color: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).scaffoldBackgroundColor : Colors.white,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Theme.of(context).scaffoldBackgroundColor
+                    : Colors.white,
                 child: TabBar(
                   controller: _tabController,
                   indicatorColor: const Color(0xFF888DFF),
                   labelColor: const Color(0xFF888DFF),
-                  unselectedLabelColor: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.grey,
+                  unselectedLabelColor:
+                      Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white70
+                      : Colors.grey,
                   labelStyle: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -594,20 +802,17 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                   ],
                 ),
               ),
-              
+
               // Tab Content
               Expanded(
                 child: TabBarView(
                   controller: _tabController,
-                  children: [
-                    _buildTodoTab(),
-                    _buildStudyPlanTab(),
-                  ],
+                  children: [_buildTodoTab(), _buildStudyPlanTab()],
                 ),
               ),
             ],
           ),
-          
+
           // Floating Action Button
           Positioned(
             bottom: 24.0,
@@ -625,15 +830,13 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
               ),
               child: FloatingActionButton(
                 onPressed: _showAddTaskModal,
-                backgroundColor: const Color(0xFF1A237E), // navy blue (brand color, keep as is)
+                backgroundColor: const Color(
+                  0xFF1A237E,
+                ), // navy blue (brand color, keep as is)
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
-                  Icons.add,
-                  color: Colors.white,
-                  size: 24,
-                ),
+                child: const Icon(Icons.add, color: Colors.white, size: 24),
               ),
             ),
           ),
@@ -645,57 +848,53 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
   Widget _buildTodoTab() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Today',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-              color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (_errorMessage != null)
-            Container(
-              padding: const EdgeInsets.all(12),
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: Colors.red.shade100,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.shade300),
+      child: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1A237E)),
               ),
-              child: Row(
-                children: [
-                  Icon(Icons.error, color: Colors.red.shade700),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _errorMessage!,
-                      style: TextStyle(color: Colors.red.shade700),
+            )
+          : ListView(
+              children: [
+                Text(
+                  'Today',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (_errorMessage != null)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade300),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.error, color: Colors.red.shade700),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _errorMessage!,
+                            style: TextStyle(color: Colors.red.shade700),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ...List.generate(
+                  _todos.length,
+                  (index) => _buildTodoItem(_todos[index]),
+                ),
+              ],
             ),
-          Expanded(
-            child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1A237E)),
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: _todos.length,
-                    itemBuilder: (context, index) {
-                      final todo = _todos[index];
-                      return _buildTodoItem(todo);
-                    },
-                  ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -709,7 +908,9 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF2C2C2E) : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isDark ? Colors.grey[700]! : Colors.grey[200]!),
+        border: Border.all(
+          color: isDark ? Colors.grey[700]! : Colors.grey[200]!,
+        ),
         boxShadow: isDark
             ? [
                 BoxShadow(
@@ -723,10 +924,10 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
       child: Row(
         children: [
           GestureDetector(
-            onTap: todo.status == TodoStatus.pending 
+            onTap: todo.status == TodoStatus.pending
                 ? () => _showStatusBubble(context, todo, itemKey)
                 : null,
-            onLongPress: todo.status != TodoStatus.pending 
+            onLongPress: todo.status != TodoStatus.pending
                 ? () => _resetTodoStatus(todo.id)
                 : null,
             child: Container(
@@ -757,9 +958,11 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
                     fontSize: 16,
                     color: isDark
                         ? Colors.white
-                        : (todo.status == TodoStatus.completed ? Colors.grey : Colors.black87),
-                    decoration: todo.status == TodoStatus.completed 
-                        ? TextDecoration.lineThrough 
+                        : (todo.status == TodoStatus.completed
+                              ? Colors.grey
+                              : Colors.black87),
+                    decoration: todo.status == TodoStatus.completed
+                        ? TextDecoration.lineThrough
                         : null,
                   ),
                 ),
@@ -837,11 +1040,7 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.construction,
-            size: 64,
-            color: Colors.grey,
-          ),
+          const Icon(Icons.construction, size: 64, color: Colors.grey),
           const SizedBox(height: 16),
           Text(
             'Study Plan Coming Soon!',
@@ -854,23 +1053,31 @@ class _TodoScreenState extends State<TodoScreen> with TickerProviderStateMixin {
           const SizedBox(height: 8),
           const Text(
             'This feature is under development',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
-            ),
+            style: TextStyle(fontSize: 16, color: Colors.grey),
           ),
         ],
       ),
     );
   }
+
+  TodoStatus _mapStatus(dynamic status) {
+    if (status == null || status == "") return TodoStatus.pending;
+    switch (status) {
+      case "O":
+      case "o":
+        return TodoStatus.completed;
+      case "X":
+      case "x":
+        return TodoStatus.failed;
+      case "~":
+        return TodoStatus.inProgress;
+      default:
+        return TodoStatus.pending;
+    }
+  }
 }
 
-enum TodoStatus {
-  pending,
-  completed,
-  failed,
-  inProgress,
-}
+enum TodoStatus { pending, completed, failed, inProgress }
 
 class BubblePainter extends CustomPainter {
   @override
@@ -878,31 +1085,36 @@ class BubblePainter extends CustomPainter {
     final fillPaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.fill;
-    
+
     final borderPaint = Paint()
-      ..color = const Color(0xFF1A237E) // navy blue
+      ..color =
+          const Color(0xFF1A237E) // navy blue
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
-    
+
     final shadowPaint = Paint()
       ..color = Colors.black.withOpacity(0.1)
       ..style = PaintingStyle.fill;
-    
+
     // Draw shadow with subtle offset
     final shadowPath = Path()
-      ..addRRect(RRect.fromRectAndRadius(
-        Rect.fromLTWH(1, 1, size.width - 2, size.height - 2),
-        const Radius.circular(20),
-      ));
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(1, 1, size.width - 2, size.height - 2),
+          const Radius.circular(20),
+        ),
+      );
     canvas.drawPath(shadowPath, shadowPaint);
-    
+
     // Draw main cloud-style bubble
     final bubblePath = Path()
-      ..addRRect(RRect.fromRectAndRadius(
-        Rect.fromLTWH(0, 0, size.width, size.height),
-        const Radius.circular(20),
-      ));
-    
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(0, 0, size.width, size.height),
+          const Radius.circular(20),
+        ),
+      );
+
     // Draw the bubble with fill and border
     canvas.drawPath(bubblePath, fillPaint);
     canvas.drawPath(bubblePath, borderPaint);

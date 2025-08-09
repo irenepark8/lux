@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1088416908944",
+    "project_id": "studentapp-lux",
+    "storage_bucket": "studentapp-lux.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1088416908944:android:66046ecf864a8a1927fa15",
+        "android_client_info": {
+          "package_name": "com.example.lux"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZXQJMmPdNWHKIqCF4dukJCmKj3cDsNmY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
